@@ -1,0 +1,326 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<!-- Dashboard Stats Cards -->
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="card bg-primary text-white shadow-sm border-0">
+            <div class="card-body">
+                <h6 class="card-title text-uppercase fs-7">Total Users</h6>
+                <h2 class="fw-bold mb-0">{{ stats.users }}</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-info text-white shadow-sm border-0">
+            <div class="card-body">
+                <h6 class="card-title text-uppercase fs-7">Total OP Appointments</h6>
+                <h2 class="fw-bold mb-0">{{ stats.total_appointments }}</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-success text-white shadow-sm border-0">
+            <div class="card-body">
+                <h6 class="card-title text-uppercase fs-7">Confirmed</h6>
+                <h2 class="fw-bold mb-0">{{ stats.confirmed_appointments }}</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-warning text-dark shadow-sm border-0">
+            <div class="card-body">
+                <h6 class="card-title text-uppercase fs-7">Pending</h6>
+                <h2 class="fw-bold mb-0">{{ stats.pending_appointments }}</h2>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4">
+    <!-- Booking Form -->
+    <div class="col-lg-5">
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-white fw-bold py-3"><i class="fa-solid fa-calendar-plus me-2 text-primary"></i>Book OP Appointment</div>
+            <div class="card-body">
+                <form id="bookingForm">
+                    <div class="mb-3">
+                        <label class="form-label">Patient Full Name</label>
+                        <input type="text" id="patient_name" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Phone Number</label>
+                        <input type="tel" id="patient_phone" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Department</label>
+                        <select id="department" class="form-select" required>
+                            <option value="">Select Department</option>
+                            <option value="General Medicine">General Medicine</option>
+                            <option value="Cardiology">Cardiology</option>
+                            <option value="Orthopedics">Orthopedics</option>
+                            <option value="Pediatrics">Pediatrics</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Doctor</label>
+                        <select id="doctor_name" class="form-select" required>
+                            <option value="">Select Doctor</option>
+                            <option value="Dr. John Smith">Dr. John Smith</option>
+                            <option value="Dr. Sarah Jenkins">Dr. Sarah Jenkins</option>
+                            <option value="Dr. Ramesh Kumar">Dr. Ramesh Kumar</option>
+                        </select>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Date</label>
+                            <input type="date" id="appointment_date" class="form-control" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Time Slot</label>
+                            <input type="time" id="time_slot" class="form-control" required>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100 fw-semibold">Submit Appointment</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Live Appointments View -->
+    <div class="col-lg-7">
+        <div class="card shadow-sm border-0 mb-4">
+            <div class="card-header bg-white fw-bold py-3"><i class="fa-solid me-2 text-primary"></i>Recent OP Appointments</div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>ID</th>
+                                <th>Patient</th>
+                                <th>Doctor</th>
+                                <th>Date/Time</th>
+                                <th>Status</th>
+                                {% if session.user_role == 'admin' %}<th>Action</th>{% endif %}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for app in appointments %}
+                            <tr>
+                                <td>#{{ app.id }}</td>
+                                <td><strong>{{ app.patient_name }}</strong><br><small class="text-muted">{{ app.patient_phone }}</small></td>
+                                <td>{{ app.doctor_name }}<br><small class="text-muted">{{ app.department }}</small></td>
+                                <td>{{ app.appointment_date }}<br><small class="text-muted">{{ app.time_slot }}</small></td>
+                                <td>
+                                    <span class="badge {% if app.status == 'Confirmed' %}bg-success{% elif app.status == 'Pending' %}bg-warning text-dark{% else %}bg-danger{% endif %}">
+                                        {{ app.status }}
+                                    </span>
+                                </td>
+                                {% if session.user_role == 'admin' %}
+                                <td>
+                                    <button class="btn btn-sm btn-outline-success" onclick="updateAppStatus({{ app.id }}, 'Confirmed')"><i class="fa-solid fa-check"></i></button>
+                                    <button class="btn btn-sm btn-outline-danger" onclick="updateAppStatus({{ app.id }}, 'Cancelled')"><i class="fa-solid fa-xmark"></i></button>
+                                </td>
+                                {% endif %}
+                            </tr>
+                            {% else %}
+                            <tr><td colspan="6" class="text-center py-3 text-muted">No appointments found.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Role-Based Admin Panel: User Management -->
+        {% if session.user_role == 'admin' %}
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-dark text-white fw-bold py-3"><i class="fa-solid me-2"></i>Admin Panel - Manage Registered Users</div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-striped align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Username</th>
+                                <th>Email</th>
+                                <th>Role</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for u in users %}
+                            <tr>
+                                <td>{{ u.id }}</td>
+                                <td>{{ u.username }}</td>
+                                <td><input type="email" id="email-{{ u.id }}" class="form-control form-control-sm" value="{{ u.email }}"></td>
+                                <td>
+                                    <select id="role-{{ u.id }}" class="form-select form-select-sm">
+                                        <option value="patient" {% if u.role == 'patient' %}selected{% endif %}>Patient</option>
+                                        <option value="doctor" {% if u.role == 'doctor' %}selected{% endif %}>Doctor</option>
+                                        <option value="admin" {% if u.role == 'admin' %}selected{% endif %}>Admin</option>
+                                    </select>
+                                </td>
+                                <td>
+                                    <button class="btn btn-sm btn-primary" onclick="updateUser({{ u.id }})">Update</button>
+                                    <button class="btn btn-sm btn-danger" onclick="deleteUser({{ u.id }})">Delete</button>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Login Modal -->
+<div class="modal fade" id="loginModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header"><h5 class="modal-title">System Login</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+      <div class="modal-body">
+        <form id="loginForm">
+            <div class="mb-3"><label>Username or Email</label><input type="text" id="login_user" class="form-control" required></div>
+            <div class="mb-3"><label>Password</label><input type="password" id="login_pass" class="form-control" required></div>
+            <button type="submit" class="btn btn-primary w-100">Login</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Register Modal -->
+<div class="modal fade" id="registerModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header"><h5 class="modal-title">Register Account</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+      <div class="modal-body">
+        <form id="registerForm">
+            <div class="mb-3"><label>Username</label><input type="text" id="reg_user" class="form-control" required></div>
+            <div class="mb-3"><label>Email</label><input type="email" id="reg_email" class="form-control" required></div>
+            <div class="mb-3"><label>Password</label><input type="password" id="reg_pass" class="form-control" required></div>
+            <div class="mb-3">
+                <label>Role</label>
+                <select id="reg_role" class="form-select">
+                    <option value="patient">Patient</option>
+                    <option value="doctor">Doctor</option>
+                </select>
+            </div>
+            <button type="submit" class="btn btn-success w-100">Register</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Handle Appointment Creation
+document.getElementById('bookingForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const payload = {
+        patient_name: document.getElementById('patient_name').value,
+        patient_phone: document.getElementById('patient_phone').value,
+        department: document.getElementById('department').value,
+        doctor_name: document.getElementById('doctor_name').value,
+        appointment_date: document.getElementById('appointment_date').value,
+        time_slot: document.getElementById('time_slot').value,
+    };
+    const res = await fetch('/api/appointments', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+    alert(data.message);
+    if(res.ok) window.location.reload();
+});
+
+// Handle Login
+document.getElementById('loginForm')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const res = await fetch('/api/login', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+            username: document.getElementById('login_user').value,
+            password: document.getElementById('login_pass').value
+        })
+    });
+    const data = await res.json();
+    if(res.ok) {
+        localStorage.setItem('token', data.token);
+        window.location.reload();
+    } else {
+        alert(data.message);
+    }
+});
+
+// Handle Registration
+document.getElementById('registerForm')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const res = await fetch('/api/register', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+            username: document.getElementById('reg_user').value,
+            email: document.getElementById('reg_email').value,
+            password: document.getElementById('reg_pass').value,
+            role: document.getElementById('reg_role').value
+        })
+    });
+    const data = await res.json();
+    alert(data.message);
+    if(res.ok) window.location.reload();
+});
+
+// Admin User Management Operations
+async function updateUser(userId) {
+    const email = document.getElementById(`email-${userId}`).value;
+    const role = document.getElementById(`role-${userId}`).value;
+    const res = await fetch(`/api/admin/users/${userId}`, {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + localStorage.getItem('token')
+        },
+        body: JSON.stringify({ email, role })
+    });
+    const data = await res.json();
+    alert(data.message);
+}
+
+async function deleteUser(userId) {
+    if(!confirm("Are you sure you want to delete this user?")) return;
+    const res = await fetch(`/api/admin/users/${userId}`, {
+        method: 'DELETE',
+        headers: {
+            'Authorization': 'Bearer ' + localStorage.getItem('token')
+        }
+    });
+    const data = await res.json();
+    alert(data.message);
+    if(res.ok) window.location.reload();
+}
+
+// Admin Appointment Status Updates
+async function updateAppStatus(appId, status) {
+    const res = await fetch(`/api/admin/appointments/${appId}/status`, {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + localStorage.getItem('token')
+        },
+        body: JSON.stringify({ status })
+    });
+    const data = await res.json();
+    alert(data.message);
+    if(res.ok) window.location.reload();
+}
+</script>
+{% endblock %}
